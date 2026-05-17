@@ -82,8 +82,8 @@ variable "lambda_log_retention_days" {
 
 variable "canary_schedule" {
   type        = string
-  default     = "rate(5 minutes)"
-  description = "EventBridge schedule for the synthetic canary."
+  default     = "rate(1 day)"
+  description = "EventBridge schedule for the synthetic canary. Daily by default — cheaper and quieter in the activity log. Override per-env in env.hcl if you want tighter detection in production."
 }
 
 variable "metric_namespace" {

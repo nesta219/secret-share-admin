@@ -79,14 +79,15 @@ resource "aws_cloudwatch_metric_alarm" "admin_api_5xx" {
 # ============================================================
 
 resource "aws_cloudwatch_metric_alarm" "canary_failure" {
-  alarm_name          = "secret-share-admin-${var.environment}-canary-failure"
-  alarm_description   = "Synthetic put+get round-trip against the main secret-share API has failed for 2 consecutive 5-min windows"
+  alarm_name        = "secret-share-admin-${var.environment}-canary-failure"
+  alarm_description = "Synthetic put+get round-trip against the main secret-share API reported failure on its daily run (or didn't run at all)"
+  # Period matches the canary cadence: one datapoint per 24h window.
   comparison_operator = "LessThanThreshold"
-  evaluation_periods  = 2
-  datapoints_to_alarm = 2
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
   metric_name         = "CanarySuccess"
   namespace           = "${var.metric_namespace}/${var.environment}"
-  period              = 300
+  period              = 86400
   statistic           = "Maximum"
   threshold           = 1
   treat_missing_data  = "breaching" # missing canary = canary itself broken = alarm
