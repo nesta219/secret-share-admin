@@ -37,7 +37,7 @@ export const Dashboard = () => {
             title="Canary"
             value={lastCanary === null ? '—' : lastCanary === 1 ? 'OK' : 'FAIL'}
             accent={lastCanary === 1 ? 'success' : lastCanary === null ? 'default' : 'error'}
-            subtitle="put + get round-trip, every 5 min"
+            subtitle="put + get round-trip, daily"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>

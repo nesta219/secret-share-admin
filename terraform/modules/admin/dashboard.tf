@@ -49,7 +49,7 @@ locals {
         width  = 24
         height = 4
         properties = {
-          title  = "Synthetic canary (put+get round-trip every 5 min)"
+          title  = "Synthetic canary (put+get round-trip, daily)"
           region = var.region
           view   = "timeSeries"
           stat   = "Minimum"

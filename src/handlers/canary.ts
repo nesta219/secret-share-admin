@@ -4,7 +4,7 @@ import { log } from '../lib/log.js';
 
 const cw = new CloudWatchClient({});
 
-// Triggered by EventBridge every 5 min. POSTs a sentinel secret to /api/put on the
+// Triggered by EventBridge (default: daily, see var.canary_schedule). POSTs a sentinel secret to /api/put on the
 // main app, then GETs it back and asserts the round-trip works. Emits
 // `CanarySuccess` to CloudWatch (1.0 on success, 0.0 on any failure). The alarm
 // in alarms.tf fires on 2 consecutive zeros.

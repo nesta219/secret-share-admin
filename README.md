@@ -20,7 +20,7 @@ Admin dashboard for the [send-a-secret.link](https://send-a-secret.link) ecosyst
                     workspaces-table   installs-table  CloudWatch    CloudWatch
                        (slack)         (discord)       Logs Insights Metrics
 
-         canary Lambda (5min)  ─→ /api/put + /api/get on main app ─→ CanarySuccess metric
+         canary Lambda (daily) ─→ /api/put + /api/get on main app ─→ CanarySuccess metric
          slack-relay Lambda    ←─ SNS alerts ←─ alarms              ─→ Slack DM to Mike
 ```
 
