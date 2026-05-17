@@ -27,11 +27,12 @@ resource "aws_cloudwatch_log_metric_filter" "secrets_created" {
   pattern = "{ ($.handler = \"put-item\") && ($.outcome = \"ok\") }"
 
   metric_transformation {
-    name          = "SecretsCreated"
-    namespace     = local.ns
-    value         = "1"
-    default_value = "0"
-    # Dimension by source so we can stack by web/slack/discord/canary on the dashboard.
+    name      = "SecretsCreated"
+    namespace = local.ns
+    value     = "1"
+    # `default_value` is mutually exclusive with `dimensions` per the CloudWatch
+    # Logs API — when emitting per-dimension metrics, "no matching events" means
+    # no datapoint for any dimension (the dashboard shows a gap, which is fine).
     dimensions = {
       Source = "$.source"
     }

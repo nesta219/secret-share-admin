@@ -4,6 +4,7 @@ dist/
 .env.dev
 .env.production
 .env.local
+.env.*.local
 .aws-sam
 .serverless
 .build
