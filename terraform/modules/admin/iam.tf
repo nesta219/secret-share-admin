@@ -53,16 +53,25 @@ data "aws_iam_policy_document" "admin_app" {
   }
 
   # CloudWatch Logs Insights against admin's own + main app + every platform's log groups.
+  # `Start/Get/StopQuery` accept resource-level ARNs (scoped to our chosen log groups).
   statement {
-    sid = "LogsInsights"
+    sid = "LogsInsightsQuery"
     actions = [
       "logs:StartQuery",
       "logs:GetQueryResults",
       "logs:StopQuery",
-      "logs:DescribeQueries",
-      "logs:DescribeLogGroups",
     ]
     resources = local.insights_log_group_arns
+  }
+
+  # `DescribeLogGroups` and `DescribeQueries` don't support resource-level IAM
+  # in CloudWatch Logs — the action returns a list and IAM has no item to
+  # match against pre-evaluation. AWS rejects scoped ARNs with an authorization
+  # error. Resource: * is the only valid form.
+  statement {
+    sid       = "LogsDescribe"
+    actions   = ["logs:DescribeLogGroups", "logs:DescribeQueries"]
+    resources = ["*"]
   }
 
   # GetMetricData / GetMetricStatistics are unfortunately resource-level-unsupported
