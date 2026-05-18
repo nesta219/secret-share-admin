@@ -6,12 +6,23 @@ locals {
 
   platform_table_arns = [for p in local.deployed_platforms : p.table_arn]
 
+  # IMPORTANT: scope every log-group ARN to the current environment. Slack/discord
+  # log group names live in the same AWS account across both envs and follow the
+  # pattern `/aws/lambda/<platform>-app-<handler>-<env>`. Without the `-${env}`
+  # suffix the wildcard would match the other env's groups too, and:
+  #   (a) IAM would let prod admin StartQuery against dev groups (data leak)
+  #   (b) DescribeLogGroups with a too-loose prefix returns the other env's groups,
+  #       which the runtime filter in events.ts now drops as defense in depth.
+  # The main app uses env-in-the-middle naming (`secret-share-backend-<env>-<fn>`)
+  # so the prefix already locks it to one env.
   insights_log_group_arns = concat(
     [
       "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/secret-share-admin-${var.environment}:*",
+      "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/secret-share-admin-canary-${var.environment}:*",
+      "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/secret-share-admin-slack-relay-${var.environment}:*",
       "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:${var.main_app_log_group_prefix}*:*",
     ],
-    [for p in local.deployed_platforms : "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:${p.log_group_prefix}*:*"],
+    [for p in local.deployed_platforms : "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:${p.log_group_prefix}*-${var.environment}:*"],
   )
 }
 

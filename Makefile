@@ -40,8 +40,15 @@ build-frontend: install-frontend  ## Vite build into frontend/dist/
 
 # ---------- Tests ----------
 
-test: install  ## Run vitest (backend)
+test: install  ## Run unit tests (vitest, no AWS)
 	npm test
+
+test-integration: install  ## Run integration tests against deployed admin in $(ENV). Mints a Cognito JWT and hits every route.
+	@POOL_ID=$$(cd $(TG_DIR) && terragrunt output -raw cognito_user_pool_id) && \
+	  CLIENT_ID=$$(cd $(TG_DIR) && terragrunt output -raw cognito_user_pool_client_id) && \
+	  API_BASE=$$(cd $(TG_DIR) && terragrunt output -raw admin_url) && \
+	  ADMIN_API_BASE=$$API_BASE COGNITO_USER_POOL_ID=$$POOL_ID COGNITO_CLIENT_ID=$$CLIENT_ID \
+	    npm run test:integration
 
 typecheck: install install-frontend  ## Type-check both backend and frontend
 	npm run typecheck

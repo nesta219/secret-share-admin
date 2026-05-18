@@ -15,11 +15,19 @@ const CACHE_TTL_MS = 60_000;
 
 // Resolves the concrete log group names from the configured prefixes once per
 // minute. Prefixes live in LOG_GROUP_PREFIXES (set by Terraform from env.hcl).
+//
+// Critical: each prefix may match log groups from BOTH dev and production
+// (e.g. `/aws/lambda/slack-app-` matches `slack-app-command-dev` AND
+// `slack-app-command-production`). After DescribeLogGroups returns, we filter
+// to only the groups belonging to this admin's env — otherwise prod admin
+// would surface dev events and the IAM grant would deny StartQuery on the
+// other env's groups (the symptom that originally exposed this bug).
 const resolveLogGroups = async (): Promise<string[]> => {
   if (cachedLogGroups && Date.now() - cachedLogGroups.ts < CACHE_TTL_MS) {
     return cachedLogGroups.names;
   }
   const prefixes = (process.env.LOG_GROUP_PREFIXES ?? '').split(',').filter(Boolean);
+  const env = process.env.ENVIRONMENT ?? '';
   const names: string[] = [];
   for (const prefix of prefixes) {
     let nextToken: string | undefined;
@@ -28,13 +36,23 @@ const resolveLogGroups = async (): Promise<string[]> => {
         new DescribeLogGroupsCommand({ logGroupNamePrefix: prefix, nextToken }),
       );
       for (const lg of out.logGroups ?? []) {
-        if (lg.logGroupName) names.push(lg.logGroupName);
+        if (!lg.logGroupName) continue;
+        if (!env || belongsToEnv(lg.logGroupName, env)) names.push(lg.logGroupName);
       }
       nextToken = out.nextToken;
     } while (nextToken);
   }
   cachedLogGroups = { ts: Date.now(), names };
   return names;
+};
+
+// Log group belongs to this env if its name ends with `-<env>` (platform repos:
+// /aws/lambda/slack-app-command-production) or contains `-<env>-` as a segment
+// (main app: /aws/lambda/secret-share-backend-production-putItemFunction).
+// Conservative — anything else is rejected so we never accidentally pull cross-env data.
+export const belongsToEnv = (logGroupName: string, env: string): boolean => {
+  if (!env) return true;
+  return logGroupName.endsWith(`-${env}`) || logGroupName.includes(`-${env}-`) || logGroupName.includes(`-${env}/`);
 };
 
 // GET /api/admin/events

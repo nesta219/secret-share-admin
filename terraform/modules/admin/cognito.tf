@@ -54,6 +54,11 @@ resource "aws_cognito_user_pool_client" "admin_spa" {
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
+    # ADMIN_USER_PASSWORD_AUTH is a server-side-only flow (callers need
+    # cognito-idp:AdminInitiateAuth IAM, which is not granted to the SPA). We
+    # enable it so the integration test harness can mint a JWT non-interactively
+    # via `aws cognito-idp admin-initiate-auth`. The SPA path stays SRP+PKCE.
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH",
   ]
 
   access_token_validity  = 60
