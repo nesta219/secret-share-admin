@@ -10,6 +10,7 @@ export interface Integration {
   display_name_field: string;
   type_discriminator: string | null;
   log_group_prefix: string;
+  deployed: boolean;
 }
 
 export interface Install {
@@ -22,6 +23,7 @@ export interface InstallsResponse {
   installs: Install[];
   count: number;
   next: string | null;
+  not_deployed?: boolean;
 }
 
 export interface EventRow {

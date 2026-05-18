@@ -1,7 +1,9 @@
 locals {
-  # Per-platform "OAuth callback errors" alarms — one per platform via for_each.
+  # Per-platform "OAuth callback errors" alarms — one per deployed platform via for_each.
+  # Skipping undeployed platforms avoids alarms in INSUFFICIENT_DATA forever on a
+  # Lambda function name that doesn't exist.
   oauth_alarm_targets = {
-    for p in var.platforms : p.name => p
+    for p in var.platforms : p.name => p if p.deployed
   }
 }
 

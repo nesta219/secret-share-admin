@@ -43,17 +43,18 @@ export const buildEventsQuery = (args: EventsQueryArgs): string => {
   if (args.outcomeFilter) filters.push(`outcome = "${escapeQuotes(args.outcomeFilter)}"`);
   if (args.teamIdFilter) filters.push(`team_id = "${escapeQuotes(args.teamIdFilter)}"`);
 
-  const filterLine = filters.length > 0 ? `| filter ${filters.join(' and ')}` : '';
   const limit = Math.max(1, Math.min(args.limit ?? 200, 1000));
 
-  return [
+  // Logs Insights wants each clause separated by `|`. Joining with a plain space
+  // produces `fields ... sort ... limit ...` which the parser rejects with
+  // MalformedQueryException — the bug that made /api/admin/events 500 on every call.
+  const clauses = [
     'fields @timestamp, @message, handler, outcome, source, team_id, install_id, event_type, reason',
-    filterLine,
+    ...(filters.length > 0 ? [`filter ${filters.join(' and ')}`] : []),
     'sort @timestamp desc',
     `limit ${limit}`,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  ];
+  return clauses.join(' | ');
 };
 
 export interface QueryStartResult {

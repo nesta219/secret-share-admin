@@ -15,6 +15,8 @@ export const integrations = async () => {
       display_name_field: p.display_name_field,
       type_discriminator: p.type_discriminator || null,
       log_group_prefix: p.log_group_prefix,
+      // false here means the SPA should show this platform's tab disabled / muted.
+      deployed: p.deployed !== false,
     })),
   });
 };

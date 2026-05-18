@@ -1,16 +1,17 @@
 locals {
-  # Every platform's install table (so admin can Scan/Query them).
-  platform_table_arns = [for p in var.platforms : p.table_arn]
+  # Only deployed platforms get IAM grants. Granting on a non-existent table ARN
+  # is harmless (IAM doesn't validate resource existence) but cluttering, and the
+  # log-group grant would fail if we tried to scope to a non-existent log group.
+  deployed_platforms = [for p in var.platforms : p if p.deployed]
 
-  # CloudWatch Logs ARNs covering: admin's own logs + main app logs + each platform's logs.
-  # Insights query operations (StartQuery, GetQueryResults, etc.) accept the log group
-  # identifiers up-front; the resource ARN scoping ensures the IAM allow is narrow.
+  platform_table_arns = [for p in local.deployed_platforms : p.table_arn]
+
   insights_log_group_arns = concat(
     [
       "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/secret-share-admin-${var.environment}:*",
       "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:${var.main_app_log_group_prefix}*:*",
     ],
-    [for p in var.platforms : "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:${p.log_group_prefix}*:*"],
+    [for p in local.deployed_platforms : "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:${p.log_group_prefix}*:*"],
   )
 }
 

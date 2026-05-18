@@ -25,7 +25,11 @@ export const Integrations = () => {
       <Typography variant="h4" sx={{ mb: 2 }}>Integrations</Typography>
       <Tabs value={active} onChange={(_, v) => setActive(v)} sx={{ mb: 2 }}>
         {list.map((i) => (
-          <Tab key={i.name} value={i.name} label={i.display_name} />
+          <Tab
+            key={i.name}
+            value={i.name}
+            label={i.deployed ? i.display_name : `${i.display_name} (not deployed)`}
+          />
         ))}
       </Tabs>
 
@@ -37,7 +41,13 @@ export const Integrations = () => {
           </Typography>
           {installs.isLoading && <CircularProgress />}
           {installs.error && <Alert severity="error">{(installs.error as Error).message}</Alert>}
-          {installs.data && (
+          {installs.data?.not_deployed && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {activeIntegration.display_name} backend isn't deployed in this environment yet
+              (table <code>{activeIntegration.table_name}</code> doesn't exist).
+            </Alert>
+          )}
+          {installs.data && !installs.data.not_deployed && (
             <>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                 {installs.data.count} install{installs.data.count === 1 ? '' : 's'}

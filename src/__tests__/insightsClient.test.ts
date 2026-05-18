@@ -13,18 +13,24 @@ describe('buildEventsQuery', () => {
   it('builds a base query with no filters', () => {
     const q = buildEventsQuery(baseArgs);
     expect(q).toContain('fields @timestamp, @message');
-    expect(q).toContain('sort @timestamp desc');
-    expect(q).toContain('limit 200');
+    expect(q).toContain('| sort @timestamp desc');
+    expect(q).toContain('| limit 200');
     expect(q).not.toContain('filter');
+  });
+
+  it('separates every clause with a pipe (Logs Insights requirement)', () => {
+    // Joining clauses with a plain space produces MalformedQueryException at
+    // runtime — every clause after `fields` must be preceded by `|`.
+    const q = buildEventsQuery({ ...baseArgs, handlerFilter: 'oauth-callback' });
+    expect(q).toMatch(/^fields .+ \| filter .+ \| sort .+ \| limit \d+$/);
   });
 
   it('adds a handler filter', () => {
     const q = buildEventsQuery({ ...baseArgs, handlerFilter: 'oauth-callback' });
-    expect(q).toContain('handler = "oauth-callback"');
-    expect(q).toContain('filter');
+    expect(q).toContain('| filter handler = "oauth-callback"');
   });
 
-  it('combines multiple filters with `and`', () => {
+  it('combines multiple filters with `and` in a single filter clause', () => {
     const q = buildEventsQuery({
       ...baseArgs,
       handlerFilter: 'command-worker',
@@ -35,6 +41,8 @@ describe('buildEventsQuery', () => {
     expect(q).toContain('outcome = "ok"');
     expect(q).toContain('team_id = "T123"');
     expect(q).toContain(' and ');
+    // Only one filter clause — multiple AND'd, not multiple `| filter` clauses.
+    expect(q.match(/\| filter /g)?.length).toBe(1);
   });
 
   it('escapes embedded quotes to prevent broken queries', () => {

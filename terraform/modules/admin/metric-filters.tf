@@ -3,13 +3,15 @@ locals {
   # need it scoped per env so dev and prod don't share counters.
   ns = "${var.metric_namespace}/${var.environment}"
 
-  # Each platform produces an install filter; uninstall filter only if the platform
-  # emits one (slack: app_uninstalled event; discord: no equivalent in phase 1).
+  # Each deployed platform produces an install filter; uninstall filter only if the
+  # platform emits one (slack: app_uninstalled event; discord: no equivalent in phase 1).
+  # Undeployed platforms are skipped — creating a filter against a non-existent log
+  # group returns ResourceNotFoundException and breaks the apply.
   install_filters = {
-    for p in var.platforms : p.name => p
+    for p in var.platforms : p.name => p if p.deployed
   }
   uninstall_filters = {
-    for p in var.platforms : p.name => p if p.uninstall_handler != ""
+    for p in var.platforms : p.name => p if p.deployed && p.uninstall_handler != ""
   }
 }
 

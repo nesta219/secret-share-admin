@@ -13,6 +13,21 @@ export const installs = async (event: APIGatewayProxyEventV2, params: Record<str
   const platform = findPlatform(params.name);
   if (!platform) return notFound(`Unknown platform: ${params.name}`);
 
+  // Platform is configured in env.hcl but its backend isn't deployed in this env.
+  // Skip the DDB scan entirely so the admin Lambda doesn't even try to look up a
+  // table that doesn't exist (which would still return correctly via the
+  // ResourceNotFoundException path in ddbClient.ts, but this avoids the round-trip).
+  if (platform.deployed === false) {
+    return ok({
+      platform: platform.name,
+      display_name: platform.display_name,
+      installs: [],
+      count: 0,
+      next: null,
+      not_deployed: true,
+    });
+  }
+
   const qs = event.queryStringParameters ?? {};
   const limit = qs.limit ? Math.max(1, Math.min(parseInt(qs.limit, 10) || 100, 500)) : 100;
   let exclusiveStartKey: Record<string, unknown> | undefined;
@@ -37,6 +52,7 @@ export const installs = async (event: APIGatewayProxyEventV2, params: Record<str
       source: 'admin',
       platform: platform.name,
       count: projected.length,
+      table_exists: scan.tableExists,
     });
 
     return ok({
@@ -45,6 +61,10 @@ export const installs = async (event: APIGatewayProxyEventV2, params: Record<str
       installs: projected,
       count: scan.count,
       next: nextCursor,
+      // `not_deployed: true` means the platform is configured in env.hcl but its
+      // backend repo hasn't been deployed in this env. The SPA renders an
+      // "(not yet deployed)" empty state rather than a 500.
+      not_deployed: !scan.tableExists,
     });
   } catch (err) {
     log({

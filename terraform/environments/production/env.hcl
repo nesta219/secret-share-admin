@@ -54,6 +54,10 @@ locals {
       install_handler      = "oauth-callback"
       uninstall_handler    = ""
       uninstall_event_type = ""
+      # Discord prod backend isn't deployed yet. Set to true once the discord
+      # repo ships to production; the admin will start watching its log group
+      # and writing IAM grants for installs-table-production on next apply.
+      deployed = false
     },
   ]
 }

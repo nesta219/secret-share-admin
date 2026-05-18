@@ -64,6 +64,11 @@ variable "platforms" {
     install_handler      = string
     uninstall_handler    = string
     uninstall_event_type = string
+    # Set false when the platform's repo isn't yet deployed in this env. We
+    # still pass the row through to the SPA so it can render an "(not deployed)"
+    # tab, but we skip per-platform IAM grants, metric filters, and alarms that
+    # would otherwise fail on the non-existent DDB table / log groups.
+    deployed = optional(bool, true)
   }))
 }
 

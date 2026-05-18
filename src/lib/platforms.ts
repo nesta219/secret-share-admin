@@ -16,6 +16,9 @@ export interface Platform {
   install_handler: string;
   uninstall_handler: string; // "" if platform has no uninstall event
   uninstall_event_type: string;
+  // `deployed = false` in env.hcl means the platform's repo isn't deployed in
+  // this env. Routes treat the row as a placeholder (return empty + not_deployed).
+  deployed?: boolean;
 }
 
 let cached: Platform[] | null = null;
