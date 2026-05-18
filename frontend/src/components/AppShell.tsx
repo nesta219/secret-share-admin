@@ -20,12 +20,14 @@ import {
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
 import HistoryIcon from '@mui/icons-material/History';
+import LockIcon from '@mui/icons-material/Lock';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
 const DRAWER_WIDTH = 220;
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+  { to: '/secrets', label: 'Secrets', icon: <LockIcon /> },
   { to: '/integrations', label: 'Integrations', icon: <IntegrationInstructionsIcon /> },
   { to: '/activity', label: 'Activity', icon: <HistoryIcon /> },
   { to: '/health', label: 'Health', icon: <MonitorHeartIcon /> },

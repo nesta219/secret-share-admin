@@ -14,7 +14,7 @@ const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '..');
 const distDir = resolve(repoRoot, 'dist');
 
-const handlers = ['admin', 'canary', 'slack-relay'];
+const handlers = ['admin', 'canary', 'slack-relay', 'secret-events-fanout'];
 
 if (existsSync(distDir)) {
   rmSync(distDir, { recursive: true, force: true });

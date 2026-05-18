@@ -62,6 +62,29 @@ export interface HealthResponse {
   alarms: AlarmRow[];
 }
 
+export interface SecretLifecycle {
+  secret_id: string;
+  source: string;
+  created_at: string | null;
+  resolved_at: string | null;
+  resolution: 'pending' | 'retrieved' | 'expired';
+  age_seconds: number | null;
+}
+
+export interface SecretsSummary {
+  created: number;
+  retrieved: number;
+  expired: number;
+  pending: number;
+}
+
+export interface SecretsResponse {
+  range: string;
+  truncated: boolean;
+  summary: SecretsSummary;
+  lifecycles: SecretLifecycle[];
+}
+
 export const useMe = () =>
   useQuery({
     queryKey: ['me'],
@@ -106,5 +129,12 @@ export const useHealth = () =>
   useQuery({
     queryKey: ['health'],
     queryFn: async () => (await api.get('/health')).data as HealthResponse,
+    refetchInterval: 30_000,
+  });
+
+export const useSecrets = (params: { range: '1h' | '24h' | '7d' | '30d'; source?: string }) =>
+  useQuery({
+    queryKey: ['secrets', params],
+    queryFn: async () => (await api.get('/secrets', { params })).data as SecretsResponse,
     refetchInterval: 30_000,
   });

@@ -6,6 +6,7 @@ import { health } from '../routes/health.js';
 import { installs } from '../routes/installs.js';
 import { integrations } from '../routes/integrations.js';
 import { me } from '../routes/me.js';
+import { secrets } from '../routes/secrets.js';
 import { stats } from '../routes/stats.js';
 
 const router = buildRouter([
@@ -15,6 +16,7 @@ const router = buildRouter([
   { method: 'GET', pattern: 'events', handler: events },
   { method: 'GET', pattern: 'stats', handler: stats },
   { method: 'GET', pattern: 'health', handler: health },
+  { method: 'GET', pattern: 'secrets', handler: secrets },
 ]);
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {

@@ -109,4 +109,41 @@ describe('admin API integration', () => {
       expect(['OK', 'ALARM', 'INSUFFICIENT_DATA']).toContain(a.state);
     }
   });
+
+  it('GET /secrets returns summary + lifecycles for 24h', async () => {
+    const res = await fetch(`${ctx.apiBase}/api/admin/secrets?range=24h`, { headers: hdrs() });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      range: string;
+      truncated: boolean;
+      summary: { created: number; retrieved: number; expired: number; pending: number };
+      lifecycles: Array<{ secret_id: string; resolution: string }>;
+    };
+    expect(body.range).toBe('24h');
+    expect(body.summary.created).toBeGreaterThanOrEqual(0);
+    for (const lc of body.lifecycles) {
+      expect(['pending', 'retrieved', 'expired']).toContain(lc.resolution);
+    }
+  });
+
+  it('GET /secrets never returns the secret payload', async () => {
+    const res = await fetch(`${ctx.apiBase}/api/admin/secrets?range=30d`, { headers: hdrs() });
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    // The /api/admin/secrets response shape has no field that could possibly
+    // contain the payload — but we paranoia-check anyway: no row should expose
+    // anything attribute-named "secret" or "payload" or "message" or "value".
+    const body = JSON.parse(text) as { lifecycles: Array<Record<string, unknown>> };
+    for (const lc of body.lifecycles) {
+      expect(lc).not.toHaveProperty('secret');
+      expect(lc).not.toHaveProperty('payload');
+      expect(lc).not.toHaveProperty('message');
+      expect(lc).not.toHaveProperty('value');
+    }
+  });
+
+  it('GET /secrets?range=invalid returns 400', async () => {
+    const res = await fetch(`${ctx.apiBase}/api/admin/secrets?range=10y`, { headers: hdrs() });
+    expect(res.status).toBe(400);
+  });
 });

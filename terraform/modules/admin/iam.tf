@@ -64,6 +64,14 @@ data "aws_iam_policy_document" "admin_app" {
     resources = local.platform_table_arns
   }
 
+  # Query the secret-events table for the Secrets tab. Query-only — the admin
+  # never writes to this table (fanout owns the writes).
+  statement {
+    sid       = "DdbReadSecretEvents"
+    actions   = ["dynamodb:Query", "dynamodb:DescribeTable"]
+    resources = [aws_dynamodb_table.secret_events.arn]
+  }
+
   # CloudWatch Logs Insights against admin's own + main app + every platform's log groups.
   # `Start/Get/StopQuery` accept resource-level ARNs (scoped to our chosen log groups).
   statement {
@@ -151,6 +159,62 @@ resource "aws_iam_role_policy" "canary_metrics" {
   name   = "secret-share-admin-canary-metrics-${var.environment}"
   role   = aws_iam_role.canary.id
   policy = data.aws_iam_policy_document.canary_metrics.json
+}
+
+# ============================================================
+#               secret-events-fanout role
+# ============================================================
+#
+# Reads from the secrets-table DDB stream, writes to the secret-events table.
+# No access to the secret payload itself — stream records carry only the
+# attributes from put-item (id, source, ttl). The `secret` attribute is in
+# OldImage / NewImage but the fanout code explicitly never reads it.
+
+data "aws_iam_policy_document" "secret_events_fanout_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "secret_events_fanout" {
+  name               = "secret-share-admin-secret-events-fanout-${var.environment}"
+  assume_role_policy = data.aws_iam_policy_document.secret_events_fanout_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "secret_events_fanout_basic" {
+  role       = aws_iam_role.secret_events_fanout.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+data "aws_iam_policy_document" "secret_events_fanout" {
+  # Pull stream records from the main app's secrets-table.
+  statement {
+    sid = "DdbStreamRead"
+    actions = [
+      "dynamodb:DescribeStream",
+      "dynamodb:GetRecords",
+      "dynamodb:GetShardIterator",
+      "dynamodb:ListStreams",
+    ]
+    resources = [data.aws_dynamodb_table.secrets_main.stream_arn]
+  }
+
+  # Write event rows to the events table.
+  statement {
+    sid       = "DdbWriteSecretEvents"
+    actions   = ["dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.secret_events.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "secret_events_fanout" {
+  name   = "secret-share-admin-secret-events-fanout-${var.environment}"
+  role   = aws_iam_role.secret_events_fanout.id
+  policy = data.aws_iam_policy_document.secret_events_fanout.json
 }
 
 # ============================================================

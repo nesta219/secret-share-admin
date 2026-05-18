@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Health } from './pages/Health';
 import { Integrations } from './pages/Integrations';
 import { Login } from './pages/Login';
+import { Secrets } from './pages/Secrets';
 
 const theme = createTheme({
   palette: {
@@ -33,6 +34,7 @@ export const App = () => (
           }
         >
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/secrets" element={<Secrets />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/activity" element={<Activity />} />
           <Route path="/health" element={<Health />} />

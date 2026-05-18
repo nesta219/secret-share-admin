@@ -37,3 +37,13 @@ output "alerts_sns_topic_arn" {
   description = "SNS topic that alarms publish to."
   value       = aws_sns_topic.alerts.arn
 }
+
+output "secret_events_table_name" {
+  description = "DynamoDB table holding per-event records consumed by the Secrets tab."
+  value       = aws_dynamodb_table.secret_events.name
+}
+
+output "secrets_stream_arn" {
+  description = "ARN of the secrets-table DDB stream (owned by the main app, looked up via data source)."
+  value       = data.aws_dynamodb_table.secrets_main.stream_arn
+}

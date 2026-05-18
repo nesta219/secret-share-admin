@@ -52,6 +52,7 @@ resource "aws_lambda_function" "admin" {
       METRIC_NAMESPACE          = "${var.metric_namespace}/${var.environment}"
       COGNITO_USER_POOL_ID      = aws_cognito_user_pool.admin.id
       COGNITO_CLIENT_ID         = aws_cognito_user_pool_client.admin_spa.id
+      SECRET_EVENTS_TABLE       = aws_dynamodb_table.secret_events.name
       # Comma-separated log group prefixes the Insights query spans. Maintained
       # by Terraform so the Lambda doesn't have to re-derive it from PLATFORMS_JSON.
       LOG_GROUP_PREFIXES = join(",", concat(
@@ -94,6 +95,66 @@ resource "aws_lambda_function" "canary" {
   }
 
   depends_on = [aws_cloudwatch_log_group.canary]
+}
+
+# ============================================================
+#                    slack-relay (alarm DM dispatcher)
+# ============================================================
+
+# ============================================================
+#       secret-events-fanout (DynamoDB stream consumer)
+# ============================================================
+#
+# Triggered by the secrets-table DynamoDB stream. Writes one row per event
+# to the secret-events table for the admin's Secrets tab. No schedule, no
+# idle cost — invocations are 1:1 with secret create / retrieve / expire
+# events on the main app.
+
+resource "aws_cloudwatch_log_group" "secret_events_fanout" {
+  name              = "/aws/lambda/secret-share-admin-secret-events-fanout-${var.environment}"
+  retention_in_days = var.lambda_log_retention_days
+}
+
+resource "aws_lambda_function" "secret_events_fanout" {
+  function_name = "secret-share-admin-secret-events-fanout-${var.environment}"
+  role          = aws_iam_role.secret_events_fanout.arn
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 128
+  timeout       = 30 # generous; batch size ≤ 100 but usually 1-2
+
+  filename         = "${local.lambda_dist_dir}/secret-events-fanout.zip"
+  source_code_hash = filebase64sha256("${local.lambda_dist_dir}/secret-events-fanout.zip")
+
+  environment {
+    variables = {
+      ENVIRONMENT          = var.environment
+      SECRET_EVENTS_TABLE  = aws_dynamodb_table.secret_events.name
+      EVENT_RETENTION_DAYS = "90"
+    }
+  }
+
+  depends_on = [aws_cloudwatch_log_group.secret_events_fanout]
+}
+
+resource "aws_lambda_event_source_mapping" "secrets_stream" {
+  event_source_arn  = data.aws_dynamodb_table.secrets_main.stream_arn
+  function_name     = aws_lambda_function.secret_events_fanout.arn
+  starting_position = "LATEST" # don't replay history at first hookup
+  batch_size        = 100
+  # Bisect on failure so a single bad record doesn't poison the whole batch
+  # and stall the stream. On_failure goes to nothing — the fanout writes its
+  # own error logs and the main app's data is unaffected by fanout failures.
+  bisect_batch_on_function_error = true
+  maximum_retry_attempts         = 3
+
+  filter_criteria {
+    # Skip MODIFY events — secrets-table rows are immutable; only INSERT and
+    # REMOVE carry signal for the Secrets tab.
+    filter {
+      pattern = jsonencode({ eventName = ["INSERT", "REMOVE"] })
+    }
+  }
 }
 
 # ============================================================
