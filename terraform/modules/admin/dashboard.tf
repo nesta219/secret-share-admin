@@ -82,6 +82,7 @@ locals {
           metrics = concat(
             [
               ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.admin.function_name],
+              ["AWS/Lambda", "Errors", "FunctionName", aws_lambda_function.secret_events_fanout.function_name],
               ["AWS/Lambda", "Errors", "FunctionName", "secret-share-backend-${var.environment}-putItemFunction"],
               ["AWS/Lambda", "Errors", "FunctionName", "secret-share-backend-${var.environment}-getByIdFunction"],
             ],

@@ -123,6 +123,34 @@ resource "aws_cloudwatch_metric_alarm" "main_put_errors" {
 }
 
 # ============================================================
+#       secret-events-fanout errors
+# ============================================================
+#
+# Fanout failing = Secrets tab data goes stale. The retry behavior on the
+# event source mapping (bisect + 3 attempts) handles transient flakes;
+# sustained errors mean code is broken or stream-to-table IAM has drifted.
+
+resource "aws_cloudwatch_metric_alarm" "secret_events_fanout_errors" {
+  alarm_name          = "secret-share-admin-${var.environment}-secret-events-fanout-errors"
+  alarm_description   = "secret-events-fanout has errored on stream records — Secrets tab data is going stale"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.secret_events_fanout.function_name
+  }
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+}
+
+# ============================================================
 #                    Per-platform OAuth callback errors
 #                    (one alarm per platform via for_each)
 # ============================================================
